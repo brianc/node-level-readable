@@ -23,7 +23,6 @@ var server = function(db, serverOptions) {
       reading = false
       //TODO handle
       if(err) {
-        console.log('throw error')
         throw err;
       }
       //reached end of stream
@@ -83,7 +82,7 @@ var client = function(stream, options) {
   var lastChunk = false
   result._transform = function(chunk, encoding, cb) {
     if(lastChunk) {
-      console.log('last chunk length', lastChunk)
+      //console.log('last chunk length', lastChunk)
       chunk = Buffer.concat([lastChunk, chunk])
       lastChunk = false
     }
@@ -99,7 +98,7 @@ var client = function(stream, options) {
     var more = true
 
     while(offset + 5 < chunk.length) {
-      console.log('offset', offset, 'datum length', length, 'chunk length', chunk.length)
+      //console.log('offset', offset, 'datum length', length, 'chunk length', chunk.length)
 
       //do not read past end
       //in the case where we received the length
