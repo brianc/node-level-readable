@@ -1,0 +1,35 @@
+{
+  "name": "level-readable",
+  "version": "0.0.0",
+  "description": "leveldb readable stream over the network",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/brianc/node-level-readable.git"
+  },
+  "keywords": [
+    "leveldb",
+    "readable",
+    "net"
+  ],
+  "author": "Brian M. Carlson",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/brianc/node-level-readable/issues"
+  },
+  "peerDependencies": {
+    "levelup": "~0.18.2"
+  },
+  "devDependencies": {
+    "okay": "~0.3.0",
+    "mocha": "~1.15.1",
+    "leveldown": "~0.10.2",
+    "rmdir": "~1.0.0",
+    "async": "~0.2.9",
+    "stream-reader": "~0.1.1"
+  },
+  "dependencies": {}
+}
