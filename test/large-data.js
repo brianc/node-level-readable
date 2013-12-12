@@ -8,12 +8,28 @@ var reader = require('stream-reader')
 describe('loaded database', function() {
 
   before(function(done) {
+    this.timeout(10000)
     var self = this
     self.server = net.createServer(function(con) {
-      self.readableServer = readable.server(db, {instrument: true})
+      self.readableServer = readable.server(db)
       con.pipe(self.readableServer).pipe(con)
     })
-    self.server.listen(port, done)
+    self.server.listen(port, function(err) {
+      if(err) return done(err);
+      var vals = []
+      var batch = db.batch()
+      for(var i = 0; i < 1000; i++) {
+        var item = []
+        for(var j = 0; j < i * Math.random(); j++) {
+          item.push({
+            name: 'My name is ' + i + ' ' + j,
+            message: 'Hellooooooo there! '
+          })
+        }
+        batch.put('BIG ' + i, JSON.stringify(item))
+      }
+      batch.write(done)
+    })
   })
 
   after(function(done) {
@@ -21,22 +37,20 @@ describe('loaded database', function() {
   })
 
   it('works', function(done) {
-    this.timeout(2000)
+    this.timeout(10000)
     var con = net.connect(port)
     var stream = readable.client(con, {
-      start: '999990',
-      end: '999999'
+      start: 'BIG',
     })
     var result = []
     stream.on('readable', function() {
       var record = stream.read()
-      JSON.parse(record.value)
+      var val = JSON.parse(record.value)
       result.push(record)
     })
     stream.on('end', function() {
-      assert.equal(result[0].key, '999990')
-      assert.equal(result[1].key, '999991')
-      assert.equal(result[8].key, '999998')
+      console.log(result.length)
+      assert.equal(result.length, 1000)
       done()
     })
   })

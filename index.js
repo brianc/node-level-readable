@@ -49,9 +49,15 @@ var server = function(db, serverOptions) {
     }
     var res = chunk.toString('utf8', 5, 5 + length)
     var options = JSON.parse(res)
-    result.iterator = db.db.iterator(options)
-    //kick the reader
-    result._read()
+    var attach = function() {
+      result.iterator = db.db.iterator(options)
+      //kick the reader
+      result._read()
+    }
+    if(db.isOpen()) {
+      return attach()
+    }
+    db.on('ready', attach)
   }
   return result
 }
@@ -77,6 +83,7 @@ var client = function(stream, options) {
   var lastChunk = false
   result._transform = function(chunk, encoding, cb) {
     if(lastChunk) {
+      console.log('last chunk length', lastChunk)
       chunk = Buffer.concat([lastChunk, chunk])
       lastChunk = false
     }
@@ -92,13 +99,15 @@ var client = function(stream, options) {
     var more = true
 
     while(offset + 5 < chunk.length) {
-      offset += 5
+      console.log('offset', offset, 'datum length', length, 'chunk length', chunk.length)
+
       //do not read past end
       //in the case where we received the length
       //but not the complete message
-      if((offset + length) > chunk.length) {
+      if((offset + length + 5) > chunk.length) {
         break;
       }
+      offset += 5
       var res = chunk.toString('utf8', offset, offset + length)
       offset += length
       if(!record.key) {
@@ -116,11 +125,11 @@ var client = function(stream, options) {
       }
       length = chunk.readUInt32BE(offset + 1)
     }
-    //console.log('end position', offset, chunk.length)
     //did not consume entire packet, save
     //unread slice for later
     if(offset < chunk.length) {
       lastChunk = chunk.slice(offset, chunk.length)
+      //console.log('end position', offset, chunk.length)
     }
     cb()
   }
