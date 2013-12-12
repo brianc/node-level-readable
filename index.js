@@ -1,5 +1,6 @@
 var stream = require('stream')
 var Transform = require('stream').Transform
+var Reader = require('./be-reader')
 
 var send = function(readable, typeCode, buffer) {
   var header = Buffer(5)
@@ -37,17 +38,21 @@ var server = function(db, serverOptions) {
     })
   }
 
+  var reader = new Reader()
+
   //receive from socket
   result._write = function(chunk, encoding, cb) {
     if(result._headerRead) throw new Error('TODO: unexpected bytes after header read');
 
-    //read length of header
-    var length = chunk.readUInt32BE(1)
-    if(chunk.length < length + 5) {
-      throw new Error('TODO: Cannot read all of header - chunked reading not supported yet')
-    }
-    var res = chunk.toString('utf8', 5, 5 + length)
-    var options = JSON.parse(res)
+    //read options header packet
+    reader.addChunk(chunk)
+    var res = reader.read()
+    if(!res) return cb();
+
+    var json = res.toString('utf8')
+    var options = JSON.parse(json)
+    result._headerRead = true
+
     var attach = function() {
       result.iterator = db.db.iterator(options)
       //kick the reader
@@ -78,59 +83,24 @@ var client = function(stream, options) {
     highWaterMark: 100
   })
   stream.pipe(result)
+
   var record = new Record()
-  var lastChunk = false
+  var reader = new Reader()
   result._transform = function(chunk, encoding, cb) {
-    if(lastChunk) {
-      //console.log('last chunk length', lastChunk)
-      chunk = Buffer.concat([lastChunk, chunk])
-      lastChunk = false
-    }
-
-    //did not receive enough to read any data
-    if(chunk.length < 5) {
-      lastChunk = chunk
-      return cb()
-    }
-
-    var offset = 0
-    var length = chunk.readUInt32BE(1)
-    var more = true
-
-    while(offset + 5 < chunk.length) {
-      //console.log('offset', offset, 'datum length', length, 'chunk length', chunk.length)
-
-      //do not read past end
-      //in the case where we received the length
-      //but not the complete message
-      if((offset + length + 5) > chunk.length) {
-        break;
-      }
-      offset += 5
-      var res = chunk.toString('utf8', offset, offset + length)
-      offset += length
+    reader.addChunk(chunk)
+    var res = reader.read()
+    while(res) {
+      var val = res.toString('utf8')
       if(!record.key) {
-        record.key = res
+        record.key = val
       } else {
-        record.value = res
+        record.value = val
         more = result.push(record)
         record = new Record()
       }
-      //if offset and 5 more bytes is
-      //more than we have left in the chunk
-      //we cannot read any farther
-      if(offset + 5 >= chunk.length) {
-        break;
-      }
-      length = chunk.readUInt32BE(offset + 1)
+      res = reader.read()
     }
-    //did not consume entire packet, save
-    //unread slice for later
-    if(offset < chunk.length) {
-      lastChunk = chunk.slice(offset, chunk.length)
-      //console.log('end position', offset, chunk.length)
-    }
-    cb()
+    return cb()
   }
   return result
 }
