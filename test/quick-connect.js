@@ -6,6 +6,7 @@ var readable = require('../')
 describe('quick connect', function() {
   it('works', function(done) {
     var server = net.createServer(function(con) {
+      console.log('client')
       con.pipe(readable.server(db)).pipe(con)
     }).listen(port)
 
@@ -13,6 +14,7 @@ describe('quick connect', function() {
       if(err) return done(err);
       var stream = readable.client(con)
       stream.once('readable', function() {
+        console.log('readlabe')
         con.end(function() {
           server.close(done)
         })

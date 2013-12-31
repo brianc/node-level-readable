@@ -1,6 +1,6 @@
 var stream = require('stream')
 var Transform = require('stream').Transform
-var Reader = require('./be-reader')
+var Reader = require('packet-reader')
 
 var send = function(readable, typeCode, buffer) {
   var header = Buffer(5)
@@ -38,7 +38,7 @@ var server = function(db, serverOptions) {
     })
   }
 
-  var reader = new Reader()
+  var reader = new Reader(1)
 
   //receive from socket
   result._write = function(chunk, encoding, cb) {
@@ -85,7 +85,7 @@ var client = function(stream, options) {
   stream.pipe(result)
 
   var record = new Record()
-  var reader = new Reader()
+  var reader = new Reader(1)
   result._transform = function(chunk, encoding, cb) {
     reader.addChunk(chunk)
     var res = reader.read()

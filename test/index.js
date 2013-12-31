@@ -54,9 +54,7 @@ var test = function(input) {
         var result = {}
         stream.on('readable', function() {
           var res = stream.read()
-          console.log('test read', res)
           result[res.key] = res.value
-          //console.log('test result', result)
         })
         stream.on('end', function() {
           for(var key in input) {
